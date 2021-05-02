@@ -12,22 +12,23 @@ import os
 import keras
 import tensorflow as tf
 import keras.preprocessing.image as image
-from keras.models import Sequential, Model
-from keras import metrics
-from keras import optimizers
-from keras.models import Sequential, Model
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras import metrics
+from tensorflow.keras import optimizers
+from tensorflow.keras.models import Sequential, Model
 from keras.layers.core import Dense
-from keras.layers import GlobalAveragePooling2D
-from keras.applications.resnet50 import ResNet50
+from tensorflow.keras.layers import GlobalAveragePooling2D
+from tensorflow.keras.applications.resnet50 import ResNet50
 import pydot, graphviz
-from keras.utils import plot_model
-from keras.applications.resnet50 import preprocess_input
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras.applications.resnet50 import preprocess_input
 print(keras.__version__)
 
 # own libraries
 from networks import unet
 from utilities import binarization, path_reader, read_images_from_path
-
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices())
 # ### Data Understanding
 # images    -- train, val, test. Normal looking images
 # maps      -- train, val. grayscale points of attention 
@@ -68,13 +69,13 @@ spatial_size = 256
 
 
 # image data generator
-images_train_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_first')
-images_val_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_first')
-images_test_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_first')
+images_train_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_last')
+images_val_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_last')
+images_test_datagen = image.ImageDataGenerator(rescale=1. / 255, preprocessing_function=preprocess_input, data_format='channels_last')
 
-maps_train_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_first')
-maps_val_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_first')
-maps_test_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_first')
+maps_train_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_last')
+maps_val_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_last')
+maps_test_datagen = image.ImageDataGenerator(preprocessing_function=None, data_format='channels_last')
 
 # flow
 images_train_generator = images_train_datagen.flow_from_directory(directory=images_train_path, classes=None, class_mode=None, batch_size=batch_size, target_size=(spatial_size, spatial_size), shuffle=False)
@@ -92,14 +93,16 @@ model = unet()
 model.compile(loss='mean_squared_error', optimizer=adam, metrics=[metrics.categorical_accuracy])
 
 # # get items out of generators
-# batch_index = 0
-# # while batch_index <= images_train_datagen.batch_size:
-# steps = 10000 // batch_size
-# for i in range(steps):
-# 	data = images_train_datagen.next()
-# 	print(data.shape)
-for imgs, maps in zip(images_train_generator, maps_train_generator):
-	model.fit(imgs, maps, batch_size = batch_size, epochs = epochs, shuffle=False)
+
+for epoch in range(epochs):
+	print("Epoch %i / %i" % (epoch, epochs))
+	batches = 0
+	for imgs, maps in zip(images_train_generator, maps_train_generator):
+		
+		model.fit(imgs, maps, batch_size = batch_size, epochs = 1, shuffle=False)
+		batches += 1
+		print("Samples Trained %i / %i" % (int(batches * batch_size), len(images_train_generator)))
+		
 
 # model.fit(x=images_train_generator, y=None, epochs=epochs)
 
